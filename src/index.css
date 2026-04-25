@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sun: #f59e0b;
+  --color-sand: #F5E6CA;
+  --color-yemen-red: #CE1126;
+  --color-yemen-green: #10b981;
+}
+
+body {
+  @apply bg-stone-50 text-stone-900;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  direction: rtl;
+}
+
+.yemen-gradient {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+}

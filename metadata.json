@@ -1,0 +1,12 @@
+{
+  "name": "شمسي - طاقة للكل",
+  "description": "نظام تقسيط الطاقة الشمسية المبتكر في اليمن بنظام الدفع المسبق (PAYG).",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "AI Voice Ordering",
+    "Installment Management",
+    "Digital Payments Simulation"
+  ]
+}
