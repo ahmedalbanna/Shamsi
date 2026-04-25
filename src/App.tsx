@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Sun, Zap, CreditCard, History, User, Settings, AlertCircle, CheckCircle2, Battery, Mic, Home, Package, Activity, ArrowLeft, Smartphone, ChevronRight, ShieldCheck, Power, LineChart, Wrench, Edit3, Save, X, Plus, Minus, CheckSquare, Square, Share2
+  Sun, Zap, CreditCard, History, User, Settings, AlertCircle, CheckCircle2, Battery, Mic, Home, Package, Activity, ArrowLeft, Smartphone, ChevronRight, ShieldCheck, Power, LineChart, Wrench, Edit3, Save, X, Plus, Minus, CheckSquare, Square, Share2, Bell, Lightbulb, Calculator, ThumbsUp, Gift, Sparkles, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -18,7 +18,17 @@ interface CustomizationOption {
   price: number;
 }
 
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+  read: boolean;
+  type: 'alert' | 'info' | 'success';
+}
+
 interface SolarPackage {
+
   id: string;
   name: string;
   price: number;
@@ -101,7 +111,7 @@ const NavItem = ({ icon, label, active, onClick }: { icon: React.ReactNode, labe
   </button>
 );
 
-const Header = () => (
+const Header = ({ onOpenNotifications, unreadCount }: { onOpenNotifications: () => void, unreadCount: number }) => (
   <header className="px-6 pt-8 pb-4 flex justify-between items-center max-w-5xl mx-auto md:pt-4">
     <div className="flex items-center gap-3">
       <div className="bg-amber-500 w-12 h-12 rounded-xl flex items-center justify-center shadow-lg hover:rotate-12 transition-transform">
@@ -112,11 +122,22 @@ const Header = () => (
         <p className="text-stone-500 text-sm">طاقة نظيفة.. بملكيتك الكاملة</p>
       </div>
     </div>
-    <div className="hidden md:flex gap-4 items-center">
-      <div className="bg-white px-4 py-2 rounded-full border border-stone-200 shadow-sm flex items-center gap-2">
+    <div className="flex gap-4 items-center">
+      <div className="hidden md:flex bg-white px-4 py-2 rounded-full border border-stone-200 shadow-sm items-center gap-2">
         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
         <span className="text-sm font-medium">نظام متصل (Online)</span>
       </div>
+      <button 
+        onClick={onOpenNotifications} 
+        className="relative bg-white p-3 rounded-xl border border-stone-200 shadow-sm hover:border-amber-400 transition-all text-stone-600"
+      >
+        <Bell size={20} />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] text-white font-bold">
+            {unreadCount}
+          </span>
+        )}
+      </button>
     </div>
   </header>
 );
@@ -142,6 +163,22 @@ export default function App() {
 
   // Customization
   const [selectedCustomizations, setSelectedCustomizations] = useState<Record<string, string[]>>({});
+
+  // New Features States
+  const [showNotificationsList, setShowNotificationsList] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([
+    { id: 'n1', title: 'تذكير بالسداد', message: 'بقيت 3 أيام على موعد قسطك القادم. سدد الآن لتجنب تقليل الطاقة.', date: 'اليوم', read: false, type: 'alert' },
+    { id: 'n2', title: 'تسجيل الدخول', message: 'تم إطلاق ميزة حاسبة التوفير الجديدة!', date: 'أمس', read: false, type: 'info' },
+    { id: 'n3', title: 'صيانة دورية', message: 'سيقوم الفني بزيارتك يوم الخميس لتنظيف ألواحك الشمسية.', date: 'قبل يومين', read: true, type: 'info' }
+  ]);
+  
+  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'processing' | 'proposal'>('idle');
+  
+  const [simData, setSimData] = useState({ lights: 4, hours: 6, hasTv: false, hasFridge: false });
+  const dieselPricePerLiter = 1200; // Yemen Riyal
+  const estimatedDieselMonthly = ((simData.lights * 0.1) + (simData.hasTv ? 0.5 : 0) + (simData.hasFridge ? 1 : 0)) * simData.hours * 30 * dieselPricePerLiter;
+  const estimatedShamsiMonthly = 18000; // Average installment
+  const simulatedSavings = Math.max(0, Math.round(estimatedDieselMonthly - estimatedShamsiMonthly));
 
   useEffect(() => {
     fetchStatus();
@@ -251,22 +288,45 @@ export default function App() {
     return pkg.price + extrasPrice;
   };
 
+  const handleVoiceClick = () => {
+    if (voiceStatus === 'idle') {
+      setVoiceStatus('listening');
+      // Simulate Voice -> AI Processing
+      setTimeout(() => setVoiceStatus('processing'), 3000);
+      setTimeout(() => setVoiceStatus('proposal'), 6000);
+    } else {
+      setVoiceStatus('idle');
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const markNotificationsAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
   if (loading) return (
-    <div className="h-screen flex items-center justify-center bg-slate-50">
+    <div className="h-screen flex items-center justify-center bg-stone-50">
       <motion.div 
         animate={{ rotate: 360 }}
         transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
       >
-        <Sun size={48} className="text-sun" />
+        <Sun size={48} className="text-amber-500" />
       </motion.div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-stone-50 pb-24 md:pt-12 md:pb-12">
-      <Header />
+      <Header 
+        onOpenNotifications={() => {
+          setShowNotificationsList(true);
+          markNotificationsAsRead();
+        }} 
+        unreadCount={unreadCount} 
+      />
       
-      <main className="max-w-5xl mx-auto px-6">
+      <main className="max-w-5xl mx-auto px-6 relative">
         <AnimatePresence mode="wait">
           {activeTab === 'home' && (
             <motion.div 
@@ -323,37 +383,157 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Voice Feature Placeholder */}
-              <div className="md:col-span-12 bg-emerald-50 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between border-2 border-dashed border-emerald-200 shadow-sm gap-4 transition-all hover:bg-emerald-100/50">
-                <div className="flex items-center gap-6 w-full md:w-auto">
-                  <button 
-                    onClick={() => setIsRecording(!isRecording)}
-                    className={cn(
-                      "w-16 h-16 rounded-full flex items-center justify-center text-white shadow-lg shrink-0 transition-all",
-                      isRecording ? "bg-red-500 animate-pulse scale-110 shadow-red-500/40" : "bg-emerald-500 hover:scale-105 shadow-emerald-500/40"
-                    )}
-                  >
-                    {isRecording ? <Square size={24} fill="currentColor" /> : <Mic size={32} />}
-                  </button>
-                  <div className="text-right flex-1">
-                    <h3 className="text-xl font-bold text-emerald-900 mb-1">تحتاج مساعدة؟</h3>
-                    <p className="text-emerald-700 text-sm">
-                      {isRecording ? "جاري الاستماع... صف ما تحتاجه ببساطة" : "اضغط للتحدث معنا.. واطلب باقتك أو الدفع بصوتك."}
-                    </p>
-                  </div>
-                </div>
-                {isRecording && (
-                  <div className="flex gap-1 h-8 items-center bg-emerald-200/50 p-2 rounded-xl border border-emerald-300">
-                    {[v=>v, v=>v*1.5, v=>v*2, v=>v*2.5, v=>v*1.5, v=>v].map((mod, i) => (
-                      <motion.div 
-                        key={i} 
-                        className="w-1.5 bg-emerald-600 rounded-full"
-                        animate={{ height: ['20%', '80%', '20%'] }}
-                        transition={{ duration: 0.5 * (i % 3 + 1), repeat: Infinity, ease: 'linear' }}
-                      />
-                    ))}
-                  </div>
-                )}
+              {/* Voice AI Ordering Feature */}
+              <div className="md:col-span-12 bg-white rounded-3xl p-6 border border-emerald-100 shadow-sm relative overflow-hidden transition-all">
+                <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-emerald-500/5 to-transparent pointer-events-none"></div>
+                
+                <AnimatePresence mode="wait">
+                  {voiceStatus === 'idle' && (
+                    <motion.div 
+                      key="idle"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="flex flex-col md:flex-row items-center justify-between gap-4"
+                    >
+                      <div className="flex items-center gap-6 w-full md:w-auto">
+                        <button 
+                          onClick={handleVoiceClick}
+                          className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 hover:scale-105 transition-all shrink-0 relative"
+                        >
+                          <Mic size={32} />
+                          <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-20"></div>
+                        </button>
+                        <div className="text-right flex-1">
+                          <h3 className="text-xl font-bold text-stone-900 mb-1 flex items-center gap-2">
+                            <Sparkles size={18} className="text-amber-500" />
+                            طلب ذكي بالصوت
+                          </h3>
+                          <p className="text-stone-500 text-sm">
+                            اضغط لتتحدث. قل مثلاً: "أحتاج باقة لتشغيل مراوح وثلاجة" وسنقترح الأنسب.
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {(voiceStatus === 'listening' || voiceStatus === 'processing') && (
+                    <motion.div 
+                      key="listening"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="flex flex-col md:flex-row items-center justify-between gap-4 bg-emerald-50 p-4 rounded-2xl"
+                    >
+                      <div className="flex items-center gap-6 w-full md:w-auto">
+                        <button 
+                          onClick={handleVoiceClick}
+                          className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30 animate-pulse shrink-0"
+                        >
+                          <Square size={24} fill="currentColor" />
+                        </button>
+                        <div className="text-right flex-1">
+                          <h3 className="text-xl font-bold text-emerald-900 mb-1">
+                            {voiceStatus === 'listening' ? 'جاري الاستماع...' : 'الذكاء الاصطناعي يحلل طلبك...'}
+                          </h3>
+                          <p className="text-emerald-700 text-sm">
+                            {voiceStatus === 'listening' ? 'تحدث بوضوح عن احتياجاتك.' : 'يبحث عن أفضل باقة لك...'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 h-12 items-center px-4">
+                        {[1, 1.5, 2, 2.5, 2, 1.5, 1, 1.8, 1.2].map((mod, i) => (
+                          <motion.div 
+                            key={i} 
+                            className="w-2 bg-emerald-500 rounded-full"
+                            animate={{ height: voiceStatus === 'listening' ? ['20%', '100%', '20%'] : '40%' }}
+                            transition={{ duration: 0.5 * (i % 3 + 1), repeat: Infinity, ease: 'linear' }}
+                          />
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {voiceStatus === 'proposal' && (
+                    <motion.div 
+                      key="proposal"
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="bg-white border-2 border-emerald-400 rounded-2xl p-6 relative"
+                    >
+                      <button onClick={handleVoiceClick} className="absolute top-4 left-4 text-stone-400 hover:text-stone-600"><X size={20}/></button>
+                      <div className="flex items-start gap-4">
+                        <div className="bg-emerald-100 p-3 rounded-full text-emerald-600 shrink-0">
+                          <MessageSquare size={24} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-stone-900 mb-2">اقتراح الذكاء الاصطناعي</h4>
+                          <p className="text-stone-600 text-sm leading-relaxed border-b border-stone-100 pb-4 mb-4">
+                            "لقد فهمت أنك تريد تشغيل <strong>مروحتين وتلفزيون صغير بالإضافة للإنارة</strong>. الباقة الأنسب لك هي <strong>باقة العيلة</strong>، وهي متوفرة بالتقسيط بـ 4500 ريال أسبوعياً."
+                          </p>
+                          <div className="flex gap-3">
+                             <button onClick={() => { setActiveTab('packages'); setVoiceStatus('idle'); }} className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-emerald-700 transition">
+                               مشاهدة الباقة المقترحة
+                             </button>
+                             <button onClick={handleVoiceClick} className="bg-stone-100 text-stone-700 px-6 py-2 rounded-xl text-sm font-bold hover:bg-stone-200 transition">
+                               إلغاء
+                             </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Solar Savings Simulator */}
+              <div className="md:col-span-12 bg-stone-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row gap-8">
+                 <div className="absolute -top-32 -left-32 w-64 h-64 bg-amber-500/10 blur-3xl rounded-full pointer-events-none"></div>
+                 
+                 <div className="md:w-1/2 space-y-6 relative z-10">
+                   <div>
+                     <h3 className="text-2xl font-black text-amber-500 flex items-center gap-2 mb-2">
+                       <Calculator size={24} />
+                       حاسبة التوفير
+                     </h3>
+                     <p className="text-stone-400 text-sm">أدخل أجهزتك لنحسب لك التوفير الشهري مقارنة بالمولدات (الديزل).</p>
+                   </div>
+                   
+                   <div className="space-y-4">
+                     <div>
+                       <label className="flex justify-between text-xs font-bold text-stone-300 mb-2">
+                         <span>عدد اللمبات (الإضاءة)</span>
+                         <span className="text-amber-500">{simData.lights}</span>
+                       </label>
+                       <input type="range" min="1" max="20" value={simData.lights} onChange={e => setSimData({...simData, lights: parseInt(e.target.value)})} className="w-full accent-amber-500" />
+                     </div>
+                     <div>
+                       <label className="flex justify-between text-xs font-bold text-stone-300 mb-2">
+                         <span>ساعات التشغيل باليوم</span>
+                         <span className="text-amber-500">{simData.hours}</span>
+                       </label>
+                       <input type="range" min="2" max="24" value={simData.hours} onChange={e => setSimData({...simData, hours: parseInt(e.target.value)})} className="w-full accent-amber-500" />
+                     </div>
+                     <div className="flex gap-4">
+                       <label className="flex items-center gap-2 text-sm text-stone-300 cursor-pointer">
+                          <input type="checkbox" checked={simData.hasTv} onChange={e => setSimData({...simData, hasTv: e.target.checked})} className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500 bg-stone-800 border-stone-700" />
+                          تلفزيون / رسيفر
+                       </label>
+                       <label className="flex items-center gap-2 text-sm text-stone-300 cursor-pointer">
+                          <input type="checkbox" checked={simData.hasFridge} onChange={e => setSimData({...simData, hasFridge: e.target.checked})} className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500 bg-stone-800 border-stone-700" />
+                          ثلاجة صغيرة
+                       </label>
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="md:w-1/2 flex items-center justify-center relative z-10">
+                   <div className="bg-stone-800 border border-stone-700 p-6 rounded-3xl w-full text-center">
+                     <p className="text-stone-400 text-sm mb-2">التوفير الشهري التقديري</p>
+                     <p className="text-5xl font-black text-white mb-2">
+                       {simulatedSavings.toLocaleString()} <span className="text-xl text-stone-400 font-normal">ر.ي</span>
+                     </p>
+                     <p className="text-xs text-stone-500 mt-4 leading-relaxed">
+                       كلفة الديزل المتوقعة: <span className="line-through text-red-400">{Math.round(estimatedDieselMonthly).toLocaleString()}</span><br/>
+                       كلفة قسط شمسي الثابتة: <span className="text-emerald-400">{estimatedShamsiMonthly.toLocaleString()}</span>
+                     </p>
+                   </div>
+                 </div>
               </div>
             </motion.div>
           )}
@@ -502,6 +682,19 @@ export default function App() {
                 </div>
                 {/* Decorative glow */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl"></div>
+              </div>
+
+              {/* Actionable Consumption Tips */}
+              <div className="md:col-span-12 bg-amber-50 rounded-3xl p-6 border border-amber-100 shadow-sm flex flex-col md:flex-row gap-4 items-center mb-6">
+                <div className="bg-amber-500/20 p-4 rounded-full text-amber-600 shrink-0">
+                   <Lightbulb size={32} />
+                </div>
+                <div>
+                   <h4 className="font-bold text-amber-900 text-lg mb-1">نصيحة ذكية للترشيد</h4>
+                   <p className="text-amber-800 text-sm leading-relaxed">
+                     بطاريتك أداؤها ممتاز! لتوفير طاقة أكبر للأيام الغائمة، ننصح بفصل التلفزيون من الفيش بدلاً من إغلاقه بالريموت، سيمنحك هذا 15% احتياطي إضافي.
+                   </p>
+                </div>
               </div>
             </motion.div>
           )}
@@ -811,32 +1004,43 @@ export default function App() {
                       <h3 className="font-bold text-lg text-stone-800">برنامج المكافآت والإحالة</h3>
                     </div>
                     
+                    {/* Visual Credit Graphic */}
+                    <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl p-6 text-white shadow-xl shadow-emerald-500/20 mb-6 relative overflow-hidden flex justify-between items-center">
+                       <div className="relative z-10">
+                         <p className="text-emerald-100 text-sm mb-1 font-bold">رصيد المكافآت الحالي</p>
+                         <div className="flex items-baseline gap-2">
+                           <span className="font-black text-4xl">{user.creditBalance}</span>
+                           <span className="text-emerald-200 font-bold">ر.ي</span>
+                         </div>
+                         <p className="text-[10px] bg-emerald-800/40 inline-block px-3 py-1 rounded-full mt-3 font-semibold uppercase">يستخدم تلقائياً عند الدفع القادم</p>
+                       </div>
+                       <div className="bg-white/20 p-4 rounded-full relative z-10 backdrop-blur-sm">
+                         <Gift size={48} className="text-white" />
+                       </div>
+                       <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                    </div>
+
                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center mb-6">
-                      <h4 className="text-amber-800 font-bold mb-2">كود الإحالة الخاص بك</h4>
-                      <p className="text-sm text-amber-700/80 mb-4">شارك هذا الكود مع أصدقائك، وسيحصل كل منكم على خصم 1000 ر.ي عند تسجيلهم!</p>
-                      <div className="bg-white rounded-xl py-3 px-6 inline-flex items-center gap-4 border border-amber-200 font-mono text-xl font-bold text-stone-800 tracking-widest shadow-sm">
+                      <h4 className="text-amber-800 font-bold mb-2">شارك كود الإحالة الخاص بك</h4>
+                      <p className="text-sm text-amber-700/80 mb-4 leading-relaxed">أرسل الكود لأصدقائك، وسيحصل كل منكم على رصيد <strong>1500 ر.ي</strong> في المحفظة عند شرائهم أي باقة!</p>
+                      <div className="bg-white rounded-xl py-3 px-6 inline-flex items-center gap-4 border border-amber-200 font-mono text-2xl font-black text-stone-800 tracking-widest shadow-sm mx-auto">
                         {user.referralCode}
                       </div>
                     </div>
 
-                     <div className="flex justify-between items-center p-4 bg-stone-50 rounded-2xl border border-stone-100 mb-6">
-                       <span className="font-bold text-stone-600">رصيدك الحالي:</span>
-                       <span className="font-black text-xl text-emerald-600">{user.creditBalance} <span className="text-xs font-normal">ر.ي</span></span>
-                     </div>
-
-                     <div className="space-y-2">
-                       <p className="text-sm font-bold text-stone-800 mb-2">لديك كود إحالة من صديق؟</p>
+                     <div className="space-y-3">
+                       <p className="text-sm font-bold text-stone-800">لديك كود إحالة من صديق؟ أدخله هنا:</p>
                        <div className="flex gap-2">
                          <input 
                            type="text" 
                            placeholder="أدخل كود الصديق هنا" 
                            value={referralCodeInput}
                            onChange={e => setReferralCodeInput(e.target.value)}
-                           className="flex-1 border border-stone-200 rounded-xl px-4 py-2 text-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-amber-500/50" dir="ltr"
+                           className="flex-1 border border-stone-200 rounded-xl px-4 py-3 text-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-amber-500/50 uppercase" dir="ltr"
                          />
                          <button 
                            onClick={handleApplyReferral}
-                           className="bg-stone-900 text-white px-6 rounded-xl font-bold hover:bg-amber-500 hover:text-stone-900 transition-colors"
+                           className="bg-stone-900 text-white px-8 rounded-xl font-bold hover:bg-amber-500 hover:text-stone-900 transition-colors shadow-md"
                          >
                            تطبيق
                          </button>
@@ -849,6 +1053,49 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Notifications Modal */}
+      <AnimatePresence>
+        {showNotificationsList && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-stone-900/40 backdrop-blur-sm flex justify-end"
+          >
+            <motion.div 
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+              className="bg-stone-50 w-full max-w-sm h-full shadow-2xl flex flex-col"
+            >
+              <div className="bg-white p-6 border-b border-stone-200 flex justify-between items-center">
+                <h3 className="font-bold text-lg text-stone-900 flex items-center gap-2">
+                  <Bell size={20} className="text-amber-500" /> الإشعارات
+                </h3>
+                <button onClick={() => setShowNotificationsList(false)} className="p-2 bg-stone-50 hover:bg-stone-100 rounded-full text-stone-500">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {notifications.map(note => (
+                  <div key={note.id} className={cn("bg-white p-4 rounded-2xl border shadow-sm flex gap-4", note.type === 'alert' ? "border-red-200" : "border-stone-100")}>
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+                      note.type === 'alert' ? "bg-red-50 text-red-500" : (note.type === 'success' ? "bg-emerald-50 text-emerald-500" : "bg-blue-50 text-blue-500")
+                    )}>
+                      {note.type === 'alert' ? <AlertCircle size={20} /> : (note.type === 'success' ? <CheckCircle2 size={20} /> : <ThumbsUp size={20} />)}
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-bold text-stone-900 text-sm">{note.title}</h4>
+                        <span className="text-[10px] text-stone-400">{note.date}</span>
+                      </div>
+                      <p className="text-xs text-stone-600 leading-relaxed">{note.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Payment Modal */}
       <AnimatePresence>
